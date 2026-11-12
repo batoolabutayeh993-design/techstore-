@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Circuit — Tech Store</title>
+<style>
+  :root {
+    --bg: #ECEDEF;
+    --surface: #FFFFFF;
+    --ink: #1B1C20;
+    --muted: #6A6E76;
+    --accent: #FF5A1F;
+    --line: rgba(27, 28, 32, 0.1);
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body {
+    font-family: "Geist", system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  .mono { font-family: "Geist Mono", ui-monospace, monospace; }
+
+  header {
+    position: sticky; top: 0; z-index: 10;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px clamp(16px, 4vw, 40px);
+    background: color-mix(in srgb, var(--bg) 85%, transparent);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--line);
+  }
+  .logo { display: flex; align-items: center; gap: 10px; font-weight: 600; letter-spacing: -0.02em; font-size: 18px; }
+  .logo-mark { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 4px rgba(255,90,31,0.15); }
+
+  .cart-btn {
+    position: relative;
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 14px 8px 12px;
+    border: 1px solid var(--line); border-radius: 999px;
+    background: var(--surface); color: var(--ink);
+    font: inherit; font-size: 14px; font-weight: 500; cursor: pointer;
+    transition: border-color .2s;
+  }
+  .cart-btn:hover { border-color: var(--ink); }
+  .cart-btn:focus-visible, .add:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .count {
+    min-width: 24px; height: 24px; padding: 0 7px;
+    display: inline-flex; align-items: center; justify-content: center;
+    border-radius: 999px; background: var(--ink); color: var(--surface);
+    font-size: 12px; font-weight: 600;
+    transition: background .2s;
+  }
+  .count.has { background: var(--accent); }
+  .count.bump { animation: bump .45s cubic-bezier(.3,1.6,.5,1); }
+  @keyframes bump { 0% { transform: scale(1) } 40% { transform: scale(1.35) } 100% { transform: scale(1) } }
+
+  main { max-width: 1200px; margin: 0 auto; padding: clamp(28px, 6vw, 64px) clamp(16px, 4vw, 40px) 80px; }
+  .intro { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 32px; }
+  h1 { font-size: clamp(30px, 5vw, 48px); font-weight: 600; letter-spacing: -0.035em; line-height: 1.05; text-wrap: balance; }
+  .intro p { color: var(--muted); font-size: 15px; max-width: 34ch; }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; list-style: none; padding: 0; }
+
+  .card {
+    display: flex; flex-direction: column;
+    background: var(--surface); border-radius: 18px; overflow: hidden;
+    opacity: 0; transform: translateY(12px);
+    animation: rise .6s cubic-bezier(.2,.7,.2,1) forwards;
+    transition: box-shadow .3s;
+  }
+  .card:hover { box-shadow: 0 18px 40px -20px rgba(27,28,32,0.25); }
+  @keyframes rise { to { opacity: 1; transform: none; } }
+  .media { aspect-ratio: 1; background: var(--bg); overflow: hidden; margin: 8px; border-radius: 12px; }
+  .media img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .6s cubic-bezier(.2,.7,.2,1); }
+  .card:hover .media img { transform: scale(1.04); }
+  .body { display: flex; flex-direction: column; gap: 4px; padding: 10px 18px 18px; flex: 1; }
+  .cat { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+  .name { font-size: 17px; font-weight: 600; letter-spacing: -0.015em; }
+  .desc { font-size: 14px; color: var(--muted); }
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: auto; padding-top: 14px; }
+  .price { font-size: 16px; font-weight: 500; }
+
+  .add {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 9px 16px; border: 0; border-radius: 999px;
+    background: var(--ink); color: var(--surface);
+    font: inherit; font-size: 14px; font-weight: 500; cursor: pointer;
+    transition: background .2s, transform .1s;
+  }
+  .add:hover { background: #33353b; }
+  .add:active { transform: scale(0.96); }
+  .add.added { background: var(--accent); }
+  .add svg { width: 16px; height: 16px; }
+
+  /* Cart panel */
+  .panel {
+    position: fixed; top: 70px; right: clamp(16px, 4vw, 40px); z-index: 20;
+    width: min(340px, calc(100vw - 32px));
+    background: var(--surface); border-radius: 16px; border: 1px solid var(--line);
+    box-shadow: 0 24px 60px -24px rgba(27,28,32,0.35);
+    padding: 18px;
+    opacity: 0; transform: translateY(-6px); pointer-events: none;
+    transition: opacity .2s, transform .2s;
+  }
+  .panel.open { opacity: 1; transform: none; pointer-events: auto; }
+  .panel h2 { font-size: 15px; font-weight: 600; margin-bottom: 12px; }
+  .items { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 10px; max-height: 260px; overflow: auto; }
+  .item { display: flex; align-items: center; gap: 12px; font-size: 14px; }
+  .item img { width: 44px; height: 44px; border-radius: 8px; object-fit: cover; background: var(--bg); }
+  .item .meta { flex: 1; min-width: 0; }
+  .item .meta span { display: block; color: var(--muted); font-size: 12px; }
+  .remove { border: 0; background: none; color: var(--muted); cursor: pointer; font: inherit; font-size: 12px; padding: 4px; }
+  .remove:hover { color: var(--ink); }
+  .empty { color: var(--muted); font-size: 14px; padding: 8px 0; }
+  .total { display: flex; justify-content: space-between; border-top: 1px solid var(--line); margin-top: 14px; padding-top: 12px; font-weight: 600; font-size: 14px; }
+  .checkout { width: 100%; margin-top: 12px; justify-content: center; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  }
+</style>
+</head>
+<body>
+  <header>
+    <div class="logo"><span class="logo-mark" aria-hidden="true"></span>Circuit</div>
+    <button class="cart-btn" id="cartBtn" aria-expanded="false" aria-controls="cartPanel">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 7h12l-1 13H7L6 7Z"/><path d="M9 7a3 3 0 0 1 6 0"/></svg>
+      Cart
+      <span class="count mono" id="count" aria-live="polite" aria-label="0 items in cart">0</span>
+    </button>
+  </header>
+
+  <aside class="panel" id="cartPanel" aria-label="Shopping cart">
+    <h2>Your cart</h2>
+    <ul class="items" id="items"></ul>
+    <div class="total"><span>Subtotal</span><span class="mono" id="total">$0</span></div>
+    <button class="add checkout">Checkout</button>
+  </aside>
+
+  <main>
+    <div class="intro">
+      <h1>Gear that gets<br />out of the way.</h1>
+      <p>Six considered devices for working, listening and capturing. Free shipping on every order.</p>
+    </div>
+    <ul class="grid" id="grid"></ul>
+  </main>
+
+<script>
+  const products = [
+    { id: 1, name: "Arc Headphones", cat: "Audio", desc: "Over-ear, 40h battery, adaptive ANC.", price: 299, img: "./img/headphones.png" },
+    { id: 2, name: "Keys 75", cat: "Workspace", desc: "Aluminum mechanical keyboard, hot-swap.", price: 189, img: "./img/keyboard.png" },
+    { id: 3, name: "Pulse Watch", cat: "Wearables", desc: "Health tracking with a 7-day battery.", price: 349, img: "./img/watch.png" },
+    { id: 4, name: "Column Speaker", cat: "Audio", desc: "360° sound, waterproof, 24h playback.", price: 159, img: "./img/speaker.png" },
+    { id: 5, name: "Buds Air", cat: "Audio", desc: "Featherweight earbuds with spatial audio.", price: 179, img: "./img/earbuds.png" },
+    { id: 6, name: "Frame Mini", cat: "Imaging", desc: "24MP mirrorless with a 35mm prime.", price: 899, img: "./img/camera.png" },
+  ];
+
+  const cart = new Map();
+  const fmt = n => "$" + n.toLocaleString("en-US");
+  const $ = id => document.getElementById(id);
+  const plus = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>';
+  const check = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5L20 7"/></svg>';
+
+  $("grid").innerHTML = products.map((p, i) => `
+    <li class="card" style="animation-delay:${i * 70}ms">
+      <div class="media"><img src="${p.img}" alt="${p.name}" loading="lazy" /></div>
+      <div class="body">
+        <span class="cat mono">${p.cat}</span>
+        <h3 class="name">${p.name}</h3>
+        <p class="desc">${p.desc}</p>
+        <div class="row">
+          <span class="price mono">${fmt(p.price)}</span>
+          <button class="add" data-id="${p.id}" aria-label="Add ${p.name} to cart">${plus}Add to Cart</button>
+        </div>
+      </div>
+    </li>`).join("");
+
+  function render() {
+    const qty = [...cart.values()].reduce((a, b) => a + b, 0);
+    const count = $("count");
+    count.textContent = qty;
+    count.setAttribute("aria-label", `${qty} item${qty === 1 ? "" : "s"} in cart`);
+    count.classList.toggle("has", qty > 0);
+
+    const entries = [...cart.entries()];
+    $("items").innerHTML = entries.length
+      ? entries.map(([id, q]) => {
+          const p = products.find(x => x.id === id);
+          return `<li class="item"><img src="${p.img}" alt="" /><div class="meta">${p.name}<span class="mono">${q} × ${fmt(p.price)}</span></div><button class="remove" data-remove="${id}" aria-label="Remove ${p.name}">Remove</button></li>`;
+        }).join("")
+      : '<li class="empty">Your cart is empty.</li>';
+    $("total").textContent = fmt(entries.reduce((s, [id, q]) => s + products.find(x => x.id === id).price * q, 0));
+  }
+
+  function bump() {
+    const c = $("count");
+    c.classList.remove("bump"); void c.offsetWidth; c.classList.add("bump");
+  }
+
+  $("grid").addEventListener("click", e => {
+    const btn = e.target.closest(".add");
+    if (!btn) return;
+    const id = +btn.dataset.id;
+    cart.set(id, (cart.get(id) || 0) + 1);
+    render(); bump();
+    btn.classList.add("added");
+    btn.innerHTML = check + "Added";
+    clearTimeout(btn._t);
+    btn._t = setTimeout(() => { btn.classList.remove("added"); btn.innerHTML = plus + "Add to Cart"; }, 1200);
+  });
+
+  $("items").addEventListener("click", e => {
+    const r = e.target.closest("[data-remove]");
+    if (!r) return;
+    cart.delete(+r.dataset.remove);
+    render();
+  });
+
+  const panel = $("cartPanel"), cartBtn = $("cartBtn");
+  const setOpen = open => { panel.classList.toggle("open", open); cartBtn.setAttribute("aria-expanded", open); };
+  cartBtn.addEventListener("click", e => { e.stopPropagation(); setOpen(!panel.classList.contains("open")); });
+  document.addEventListener("click", e => { if (!panel.contains(e.target)) setOpen(false); });
+  document.addEventListener("keydown", e => { if (e.key === "Escape") setOpen(false); });
+
+  render();
+</script>
+</body>
+</html>
